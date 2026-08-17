@@ -68,7 +68,7 @@ export interface CbsaRow {
   lon: number;
   flags: Record<string, boolean>;
   m: Record<string, MetricCell>;
-  v11: { composite: number; rank: number };
+  baseline: { composite: number; rank: number };
 }
 
 /** cbsas.json top level. */
@@ -126,7 +126,7 @@ export type ColorBy =
   | { kind: 'group'; id: string }
   | { kind: 'metric'; id: string };
 
-/** Engine self-test result computed on boot against v11 composites. */
+/** Engine self-test result computed on boot against baseline composites. */
 export interface SelfTest {
   ok: boolean;
   maxDiff: number;

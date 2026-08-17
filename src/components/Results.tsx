@@ -47,7 +47,7 @@ export function Results() {
         </thead>
         <tbody>
           {visible.map(({ row, rank, composite }) => {
-            const delta = row.v11.rank - rank;
+            const delta = row.baseline.rank - rank;
             return (
               <tr
                 key={row.id}

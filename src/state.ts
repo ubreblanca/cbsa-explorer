@@ -163,13 +163,13 @@ export function isDefaultConfig(registry: Registry, config: Config): boolean {
 
 /**
  * Engine run for the store. With the untouched default config, displayed ranks are
- * the authoritative baseline (v11) ranks: the shipped 2-dp scores can flip a few near-tie
+ * the authoritative baseline ranks: the shipped 2-dp scores can flip a few near-tie
  * adjacent pairs, which would otherwise show spurious ±1 delta chips at default.
  */
 function runEngine(registry: Registry, config: Config, rows: CbsaRow[]): EngineOutput {
   const out = computeAll(registry, config, rows);
   if (isDefaultConfig(registry, config)) {
-    for (const row of rows) out.rankById.set(row.id, row.v11.rank);
+    for (const row of rows) out.rankById.set(row.id, row.baseline.rank);
   }
   return out;
 }

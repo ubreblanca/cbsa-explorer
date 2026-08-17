@@ -58,7 +58,7 @@ export function Details({ id }: { id: string }) {
         <div className="score-ranks">
           <span>rank #{rank ?? '—'} (current weights)</span>
           <span>
-            rank #{row.v11.rank} · {formatComposite(row.v11.composite)} (baseline)
+            rank #{row.baseline.rank} · {formatComposite(row.baseline.composite)} (baseline)
           </span>
         </div>
       </div>

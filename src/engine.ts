@@ -1,4 +1,4 @@
-// Scoring engine: pure functions implementing the baseline (v11) aggregation spec.
+// Scoring engine: pure functions implementing the baseline aggregation spec.
 // Percentile scores are precomputed in the data; this only aggregates:
 //   group = weighted mean of enabled metric scores; composite = weighted mean of
 //   enabled core groups + sum(bonusWeight * bonusScore / 100).
@@ -95,7 +95,7 @@ export function computeAll(registry: Registry, config: Config, rows: CbsaRow[]):
 }
 
 /**
- * Boot self-test: with the DEFAULT config the engine must reproduce v11.composite
+ * Boot self-test: with the DEFAULT config the engine must reproduce baseline.composite
  * per row within 0.02 (scores in the data are rounded to 2 dp).
  */
 export function selfTest(registry: Registry, rows: CbsaRow[]): SelfTest {
@@ -106,8 +106,8 @@ export function selfTest(registry: Registry, rows: CbsaRow[]): SelfTest {
       id: row.id,
       name: row.name,
       computed,
-      expected: row.v11.composite,
-      diff: Math.abs(computed - row.v11.composite),
+      expected: row.baseline.composite,
+      diff: Math.abs(computed - row.baseline.composite),
     };
   });
   diffs.sort((a, b) => b.diff - a.diff);
