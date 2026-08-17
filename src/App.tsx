@@ -18,7 +18,7 @@ export default function App() {
   if (loadError) {
     return (
       <div className="boot-panel boot-error" role="alert">
-        <h1>Data files missing</h1>
+        <h1>Data failed to load</h1>
         <p>{loadError}</p>
         <p>
           Expected files: <code>data/metrics.json</code>, <code>data/cbsas.json</code>,{' '}

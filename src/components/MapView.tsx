@@ -15,6 +15,7 @@ import type {
 } from 'maplibre-gl';
 import type { FeatureCollection } from 'geojson';
 import { applyFilters, getMeasure, serializeColorBy, parseColorBy, useStore } from '../state';
+import { dataUrl } from '../data';
 import { formatComposite, VIRIDIS } from '../format';
 import { Legend } from './Legend';
 import type { CbsaRow, EngineOutput } from '../types';
@@ -248,7 +249,7 @@ export function MapView() {
     void (async () => {
       let fc: FeatureCollection;
       try {
-        const res = await fetch(import.meta.env.BASE_URL + 'data/boundaries_excluded.geojson');
+        const res = await fetch(dataUrl('data/boundaries_excluded.geojson'));
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         fc = (await res.json()) as FeatureCollection;
       } catch (err) {
