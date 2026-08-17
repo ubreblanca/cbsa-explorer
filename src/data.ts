@@ -33,7 +33,7 @@ export async function loadData(): Promise<LoadedData> {
     ]);
   } catch (err) {
     throw new Error(
-      'Could not load data/metrics.json + data/cbsas.json — ' +
+      'Could not load data/metrics.json + data/cbsas.json: ' +
         'the data files are missing or failed to load. ' +
         `Underlying error: ${err instanceof Error ? err.message : String(err)}`,
     );
@@ -44,7 +44,7 @@ export async function loadData(): Promise<LoadedData> {
   if (registry.model_version !== cbsas.model_version || !cbsas.rows[0]?.baseline) {
     throw new Error(
       `Data files are inconsistent with each other or this build (metrics ` +
-        `${registry.model_version}, cbsas ${cbsas.model_version}) — likely a stale ` +
+        `${registry.model_version}, cbsas ${cbsas.model_version}), likely a stale ` +
         'cache from a previous deployment. Hard-refresh to reload.',
     );
   }
@@ -54,7 +54,7 @@ export async function loadData(): Promise<LoadedData> {
     boundaries = await fetchJson<FeatureCollection>('data/boundaries.geojson');
   } catch (err) {
     // Non-fatal: rows stay selectable from the results list; map shows basemap only.
-    console.warn('boundaries.geojson unavailable — map polygons disabled.', err);
+    console.warn('boundaries.geojson unavailable (map polygons disabled).', err);
   }
 
   return { registry, cbsas, boundaries };

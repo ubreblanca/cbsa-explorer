@@ -105,9 +105,6 @@ export function Header() {
         <button type="button" onClick={onCopyLink}>
           {copied ? 'Copied!' : 'Copy share link'}
         </button>
-        <button type="button" onClick={() => useStore.getState().resetConfig()}>
-          Reset
-        </button>
         <button
           type="button"
           className={badge.className}

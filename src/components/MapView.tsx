@@ -253,7 +253,7 @@ export function MapView() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         fc = (await res.json()) as FeatureCollection;
       } catch (err) {
-        console.warn('boundaries_excluded.geojson unavailable — excluded layer disabled.', err);
+        console.warn('boundaries_excluded.geojson unavailable (excluded layer disabled).', err);
         return;
       }
       if (cancelled || !mapRef.current || map.getSource(EXCLUDED_SOURCE_ID)) return;

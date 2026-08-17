@@ -18,7 +18,40 @@ export function Panel() {
         <GroupCard key={g.id} registry={registry} group={g} />
       ))}
       <FiltersCard />
+      <PanelActions />
     </aside>
+  );
+}
+
+/**
+ * Bottom action row. The toggle serves the isolation workflow: disable every
+ * group, then re-enable the one or two under study. Only group enabled flags
+ * flip — weights and per-metric settings are kept, so "Enable all groups"
+ * returns to the previous weighting. Reset restores the full baseline config.
+ */
+function PanelActions() {
+  const anyEnabled = useStore((s) => Object.values(s.config.groups).some((g) => g.enabled));
+  return (
+    <div className="panel-actions">
+      <button
+        type="button"
+        onClick={() => useStore.getState().setAllGroupsEnabled(!anyEnabled)}
+        title={
+          anyEnabled
+            ? 'Turn off every group (weights and metric settings kept), then switch on just the one or two you want to isolate'
+            : 'Turn every group back on (weights and metric settings unchanged)'
+        }
+      >
+        {anyEnabled ? 'Disable all groups' : 'Enable all groups'}
+      </button>
+      <button
+        type="button"
+        onClick={() => useStore.getState().resetConfig()}
+        title="Restore the baseline: all groups and metrics enabled at their default weights"
+      >
+        Reset
+      </button>
+    </div>
   );
 }
 
@@ -165,7 +198,7 @@ function FiltersCard() {
   return (
     <section className="card filters-card">
       <h2 className="card-title">
-        Filters <span className="card-subtitle">display only — never affects scoring</span>
+        Filters
       </h2>
       <label className="filter-field">
         Type

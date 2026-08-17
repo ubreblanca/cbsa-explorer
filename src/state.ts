@@ -253,6 +253,8 @@ export interface AppState {
   setGroupEnabled: (id: string, enabled: boolean) => void;
   setGroupWeight: (id: string, weight: number) => void;
   setMetricEnabled: (id: string, enabled: boolean) => void;
+  /** Flip every group's enabled flag at once (weights and metric settings untouched). */
+  setAllGroupsEnabled: (enabled: boolean) => void;
   setMetricWeight: (id: string, weight: number) => void;
   resetConfig: () => void;
   savePreset: (name: string) => void;
@@ -352,6 +354,13 @@ export const useStore = create<AppState>()((set, get) => {
       const cur = config.metrics[id];
       if (!cur) return;
       applyConfig({ ...config, metrics: { ...config.metrics, [id]: { ...cur, enabled } } });
+    },
+
+    setAllGroupsEnabled: (enabled) => {
+      const { config } = get();
+      const groups: Config['groups'] = {};
+      for (const [id, gc] of Object.entries(config.groups)) groups[id] = { ...gc, enabled };
+      applyConfig({ ...config, groups });
     },
 
     setMetricWeight: (id, weight) => {

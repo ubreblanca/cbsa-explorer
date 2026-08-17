@@ -217,6 +217,16 @@ button:disabled {
   padding: 10px;
 }
 
+.panel-actions {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.panel-actions button {
+  flex: 1;
+}
+
 .card-title {
   margin: 0 0 8px;
   font-size: 13px;
