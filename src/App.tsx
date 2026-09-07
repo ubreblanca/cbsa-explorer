@@ -10,6 +10,7 @@ import { Results } from './components/Results';
 export default function App() {
   const loading = useStore((s) => s.loading);
   const loadError = useStore((s) => s.loadError);
+  const notice = useStore((s) => s.registry?.notice);
 
   useEffect(() => {
     void useStore.getState().loadAll();
@@ -35,6 +36,7 @@ export default function App() {
   return (
     <div className="app">
       <Header />
+      {notice && <div className="data-notice" role="note">{notice}</div>}
       <div className="main">
         <Panel />
         <MapView />

@@ -78,6 +78,15 @@ button:disabled {
   white-space: nowrap;
 }
 
+.data-notice {
+  flex: 0 0 auto;
+  padding: 6px 14px;
+  background: var(--warn-bg);
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
 /* ---- boot / error states ---- */
 
 .boot-panel {

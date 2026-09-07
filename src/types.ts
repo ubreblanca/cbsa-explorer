@@ -44,6 +44,8 @@ export interface Registry {
   schema_version: number;
   model_version: string;
   generated: string;
+  notice?: string;
+  score_decimals?: number;
   groups: GroupDef[];
   metrics: MetricDef[];
   flags: FlagDef[];

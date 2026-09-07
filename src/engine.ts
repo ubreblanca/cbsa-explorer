@@ -96,7 +96,7 @@ export function computeAll(registry: Registry, config: Config, rows: CbsaRow[]):
 
 /**
  * Boot self-test: with the DEFAULT config the engine must reproduce baseline.composite
- * per row within 0.02 (scores in the data are rounded to 2 dp).
+ * per row within 0.02 (legacy data used 2-dp scores; current exports use 8 dp).
  */
 export function selfTest(registry: Registry, rows: CbsaRow[]): SelfTest {
   const out = computeAll(registry, defaultConfig(registry), rows);
