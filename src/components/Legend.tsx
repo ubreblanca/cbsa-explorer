@@ -7,7 +7,7 @@ import { formatMeasure, viridisGradient } from '../format';
 /** Toggle + swatch + footnote for the excluded layer; hidden until it loads. */
 function ExcludedRows() {
   const showExcluded = useStore((s) => s.showExcluded);
-  const excludedCount = useStore((s) => s.excludedCount);
+  const excludedCount = useStore((s) => s.engine ? s.rows.length - s.engine.eligibleIds.size : null);
   const setShowExcluded = useStore((s) => s.setShowExcluded);
   if (excludedCount === null) return null;
 
@@ -45,6 +45,7 @@ export function Legend() {
   if (!registry || !engine) return null;
 
   const vals = applyFilters(rows, filters)
+    .filter((r) => engine.eligibleIds.has(r.id))
     .map((r) => getMeasure(r, engine, colorBy))
     .filter((v): v is number => v !== null)
     .sort((a, b) => a - b);

@@ -25,6 +25,8 @@ export function Details({ id }: { id: string }) {
     .map(([fid]) => flagDefs.get(fid) ?? { id: fid, label: fid, level: 'info' as const, description: '' });
 
   const groups = [...registry.groups].sort((a, b) => a.order - b.order);
+  const eligibility = engine.eligibility.get(row.id);
+  const metricNames = (ids: string[]) => ids.map((mid) => registry.metrics.find((m) => m.id === mid)?.label ?? mid).join(', ');
 
   return (
     <div className="details">
@@ -50,16 +52,27 @@ export function Details({ id }: { id: string }) {
           ))}
         </div>
       )}
+      {!!row.coverage_notes?.length && <details className="detail-coverage" open={!!row.flags.climate_coverage}>
+        <summary>Data coverage and locations</summary>
+        {row.coverage_notes.map((note) => <p key={note}>{note}</p>)}
+      </details>}
+      {eligibility && (eligibility.reasons.length > 0 || eligibility.warnings.length > 0) && (
+        <div className="detail-coverage">
+          <strong>{eligibility.eligible ? 'Provisionally eligible' : 'Screened out under current settings'}</strong>
+          {[...eligibility.reasons, ...eligibility.warnings].map((text) => <p key={text}>{text}</p>)}
+        </div>
+      )}
+      {score.missingMetrics.length > 0 && <p className="detail-coverage">No overall score while these unavailable criteria are active: {metricNames(score.missingMetrics)}.</p>}
+      {score.imputedMetrics.length > 0 && <p className="detail-coverage">Scores use assumptions for missing values: {metricNames(score.imputedMetrics)}. See each metric's source/scoring note.</p>}
       <div className="details-scores">
         <div className="score-big">
           <span className="score-value">{formatComposite(score.composite)}</span>
           <span className="score-caption">composite</span>
         </div>
         <div className="score-ranks">
-          <span>rank #{rank ?? '—'} (current weights)</span>
-          <span>
-            rank #{row.baseline.rank} · {formatComposite(row.baseline.composite)} (baseline)
-          </span>
+          <span>rank {rank === undefined ? 'N/A' : `#${rank}`} (eligible, current weights)</span>
+          <span>rank {engine.baselineRankById.has(row.id) ? `#${engine.baselineRankById.get(row.id)}` : 'N/A'} (eligible, default weights)</span>
+          <span>{formatComposite(row.baseline.composite)} · national default score</span>
         </div>
       </div>
       {groups.map((g) => (
@@ -104,7 +117,7 @@ function GroupBar(props: {
           </span>
         </span>
         <span className="detail-group-score">
-          {groupScore === null ? '—' : formatScore(groupScore)}
+          {formatScore(groupScore)}
         </span>
       </button>
       <div className="bar-track" aria-hidden="true">
@@ -133,20 +146,21 @@ function GroupBar(props: {
 function MetricDetail({ metric, rowId }: { metric: MetricDef; rowId: string }) {
   const cell = useStore((s) => s.rows.find((r) => r.id === rowId)?.m[metric.id]);
   const enabled = useStore((s) => s.config.metrics[metric.id]?.enabled ?? true);
+  const available = cell?.s != null;
   return (
     <li className={`detail-metric${enabled ? '' : ' is-disabled'}`}>
       <span className="detail-metric-label">{metric.label}</span>
-      <span className="detail-metric-value">{cell ? formatValue(cell.v, metric) : '—'}</span>
-      <span className="mini-bar" aria-label={`score ${cell ? formatScore(cell.s) : '—'}`}>
+      <span className="detail-metric-value" title={!available ? 'Unavailable; blocks overall score while active' : cell?.v === null ? 'Missing raw value; score uses the documented imputation' : ''}>{formatValue(cell?.v, metric)}</span>
+      <span className="mini-bar" aria-label={`score ${formatScore(cell?.s)}`}>
         <span
           className="mini-bar-fill"
           style={{
-            width: `${cell ? Math.max(0, Math.min(100, cell.s)) : 0}%`,
-            background: cell ? viridisColor(cell.s / 100) : 'transparent',
+            width: `${available ? Math.max(0, Math.min(100, cell.s!)) : 0}%`,
+            background: available ? viridisColor(cell.s! / 100) : 'transparent',
           }}
         />
       </span>
-      <span className="detail-metric-score">{cell ? formatScore(cell.s) : '—'}</span>
+      <span className="detail-metric-score">{formatScore(cell?.s)}</span>
     </li>
   );
 }

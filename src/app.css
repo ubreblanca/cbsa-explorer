@@ -87,6 +87,13 @@ button:disabled {
   font-size: 12px;
 }
 
+.screen-count { margin: 6px 0 10px; font-weight: 600; }
+.screen-note { margin: 7px 0 12px; font-size: 11px; line-height: 1.45; color: var(--text-dim); }
+.screen-toggle { display: flex; align-items: center; gap: 7px; margin: 10px 0; font-weight: 600; }
+.screen-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.screens-card .filter-field input { width: 95px; }
+.detail-coverage { padding: 8px; margin: 8px 0; background: var(--warn-bg); font-size: 12px; line-height: 1.45; }
+
 /* ---- boot / error states ---- */
 
 .boot-panel {

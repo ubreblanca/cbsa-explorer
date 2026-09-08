@@ -42,7 +42,7 @@ function hexRgb(hex: string): number[] {
 
 /** Format a raw metric value per its registry unit/decimals. null → em dash. */
 export function formatValue(v: number | null | undefined, m: MetricDef): string {
-  if (v === null || v === undefined || Number.isNaN(v)) return '—';
+  if (v === null || v === undefined || !Number.isFinite(v)) return 'N/A';
   const num = v.toLocaleString('en-US', {
     minimumFractionDigits: m.decimals,
     maximumFractionDigits: m.decimals,
@@ -53,12 +53,12 @@ export function formatValue(v: number | null | undefined, m: MetricDef): string 
   return `${num} ${m.unit}`;
 }
 
-export function formatComposite(c: number): string {
-  return c.toFixed(1);
+export function formatComposite(c: number | null | undefined): string {
+  return c == null || !Number.isFinite(c) ? 'N/A' : c.toFixed(1);
 }
 
-export function formatScore(s: number): string {
-  return s.toFixed(0);
+export function formatScore(s: number | null | undefined): string {
+  return s == null || !Number.isFinite(s) ? 'N/A' : s.toFixed(0);
 }
 
 export function formatPop(pop: number): string {

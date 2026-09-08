@@ -66,7 +66,7 @@ export function Header() {
 
   let badge: { className: string; text: string };
   if (!isDefault) {
-    badge = { className: 'badge badge-custom', text: 'custom weights' };
+    badge = { className: 'badge badge-custom', text: 'custom settings' };
   } else if (selfTestResult?.ok) {
     badge = { className: 'badge badge-ok', text: 'matches baseline ✓' };
   } else {

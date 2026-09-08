@@ -29,6 +29,8 @@ export interface MetricDef {
   vintage: string;
   scoring_note: string;
   description: string;
+  missing_count?: number;
+  unscored_count?: number;
 }
 
 /** One entry of metrics.json "flags". */
@@ -46,6 +48,8 @@ export interface Registry {
   generated: string;
   notice?: string;
   score_decimals?: number;
+  reference_count: number;
+  screens: { defaults: ScreenConfig };
   groups: GroupDef[];
   metrics: MetricDef[];
   flags: FlagDef[];
@@ -54,7 +58,32 @@ export interface Registry {
 /** Per-metric cell in a cbsas.json row: raw display value + precomputed 0-100 percentile score. */
 export interface MetricCell {
   v: number | null;
-  s: number;
+  /** null means genuinely unavailable, not an imputed average. */
+  s: number | null;
+}
+
+export interface ScreenConfig {
+  humidityEnabled: boolean;
+  maxDewPointF: number;
+  airportEnabled: boolean;
+  gatewayMiles: number;
+  largeMiles: number;
+  mediumMiles: number;
+}
+
+export interface ScreenInputs {
+  dewPointF: number | null;
+  humidityVerified: boolean;
+  humidityStation: string | null;
+  gatewayMiles: number | null;
+  largeMiles: number | null;
+  mediumMiles: number | null;
+}
+
+export interface ScreenResult {
+  eligible: boolean;
+  reasons: string[];
+  warnings: string[];
 }
 
 /** One entry of cbsas.json "rows". */
@@ -69,8 +98,11 @@ export interface CbsaRow {
   lat: number;
   lon: number;
   flags: Record<string, boolean>;
+  coverage_notes?: string[];
   m: Record<string, MetricCell>;
-  baseline: { composite: number; rank: number };
+  screen: ScreenInputs;
+  /** National default-weight baseline, NOT a rank in the current eligible set. */
+  baseline: { composite: number | null; rank: number | null };
 }
 
 /** cbsas.json top level. */
@@ -98,12 +130,15 @@ export interface MetricConfig {
 export interface Config {
   groups: Record<string, GroupConfig>;
   metrics: Record<string, MetricConfig>;
+  screens: ScreenConfig;
 }
 
 /** Result of one engine run for a single CBSA. */
 export interface ScoreResult {
   /** 0-100-ish composite (bonus groups add on top). */
-  composite: number;
+  composite: number | null;
+  missingMetrics: string[];
+  imputedMetrics: string[];
   /** Group id -> aggregated 0-100 score, or null when the group has no enabled metrics. */
   groupScores: Record<string, number | null>;
 }
@@ -111,8 +146,11 @@ export interface ScoreResult {
 /** Full engine output over all rows. */
 export interface EngineOutput {
   byId: Map<string, ScoreResult>;
-  /** CBSA id -> rank (1 = best), computed over ALL rows (filters never affect scoring). */
+  /** Ranks among eligible, scorable rows; search/type/population do not change ranks. */
   rankById: Map<string, number>;
+  baselineRankById: Map<string, number>;
+  eligibility: Map<string, ScreenResult>;
+  eligibleIds: Set<string>;
 }
 
 /** Display-only filters (never affect scoring). */
@@ -132,5 +170,5 @@ export type ColorBy =
 export interface SelfTest {
   ok: boolean;
   maxDiff: number;
-  worst: Array<{ id: string; name: string; computed: number; expected: number; diff: number }>;
+  worst: Array<{ id: string; name: string; computed: number | null; expected: number | null; diff: number }>;
 }

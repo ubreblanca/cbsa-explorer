@@ -41,7 +41,19 @@ export async function loadData(): Promise<LoadedData> {
 
   // Contract check: both files from the same model, rows carrying the baseline key.
   // A mismatch means a cached file from a previous deployment, not a missing one.
-  if (registry.model_version !== cbsas.model_version || !cbsas.rows[0]?.baseline) {
+  if (registry.schema_version !== 2 || cbsas.schema_version !== 2 ||
+      registry.model_version !== cbsas.model_version || !registry.screens?.defaults ||
+      cbsas.count !== cbsas.rows.length || cbsas.count !== registry.reference_count ||
+      new Set(cbsas.rows.map((r) => r.id)).size !== cbsas.count ||
+      cbsas.rows.some((r) => !r.baseline || !r.screen || typeof r.screen.humidityVerified !== 'boolean' ||
+        [r.screen.dewPointF, r.screen.gatewayMiles, r.screen.largeMiles, r.screen.mediumMiles,
+         r.baseline.composite].some((v) => v !== null && !Number.isFinite(v)) ||
+        (r.baseline.rank !== null && (!Number.isInteger(r.baseline.rank) || r.baseline.rank < 1)) ||
+        registry.metrics.some((m) => {
+        const c = r.m?.[m.id];
+        return !c || (c.s !== null && (!Number.isFinite(c.s) || c.s < 0 || c.s > 100)) ||
+          (c.v !== null && !Number.isFinite(c.v));
+      }))) {
     throw new Error(
       `Data files are inconsistent with each other or this build (metrics ` +
         `${registry.model_version}, cbsas ${cbsas.model_version}), likely a stale ` +
@@ -52,6 +64,11 @@ export async function loadData(): Promise<LoadedData> {
   let boundaries: FeatureCollection | null = null;
   try {
     boundaries = await fetchJson<FeatureCollection>('data/boundaries.geojson');
+    const ids = new Set(boundaries.features.map((f) => String(f.properties?.['id'])));
+    if (ids.size !== cbsas.count || cbsas.rows.some((r) => !ids.has(r.id))) {
+      boundaries = null;
+      throw new Error('Map boundaries do not match the full data universe');
+    }
   } catch (err) {
     // Non-fatal: rows stay selectable from the results list; map shows basemap only.
     console.warn('boundaries.geojson unavailable (map polygons disabled).', err);

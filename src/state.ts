@@ -3,8 +3,9 @@
 // Scores recompute via a requestAnimationFrame-debounced engine run.
 
 import { create } from 'zustand';
-import { computeAll, defaultConfig, selfTest } from './engine';
-import { loadData } from './data';
+import { computeAll, defaultConfig, selfTest } from './engine.ts';
+import { loadData } from './data.ts';
+import { DEFAULT_SCREENS, normalizeScreens } from './eligibility.ts';
 import type { FeatureCollection } from 'geojson';
 import type {
   CbsaRow,
@@ -13,6 +14,7 @@ import type {
   EngineOutput,
   Filters,
   Registry,
+  ScreenConfig,
   SelfTest,
 } from './types';
 
@@ -83,6 +85,8 @@ interface HashPayload {
   m?: Record<string, [number, number]>;
   /** colorBy, when not composite */
   c?: string;
+  /** Eligibility settings, independent of weights and national calibration. */
+  s?: Partial<ScreenConfig>;
 }
 
 function b64urlEncode(text: string): string {
@@ -98,7 +102,7 @@ function b64urlDecode(data: string): string {
   return new TextDecoder().decode(Uint8Array.from(bin, (ch) => ch.charCodeAt(0)));
 }
 
-function configDiff(registry: Registry, config: Config, colorBy: ColorBy): HashPayload {
+export function configDiff(registry: Registry, config: Config, colorBy: ColorBy): HashPayload {
   const def = defaultConfig(registry);
   const payload: HashPayload = {};
   const g: NonNullable<HashPayload['g']> = {};
@@ -120,21 +124,27 @@ function configDiff(registry: Registry, config: Config, colorBy: ColorBy): HashP
   if (Object.keys(g).length > 0) payload.g = g;
   if (Object.keys(m).length > 0) payload.m = m;
   if (colorBy.kind !== 'composite') payload.c = serializeColorBy(colorBy);
+  if (Object.keys(def.screens).some((k) => config.screens[k as keyof ScreenConfig] !== def.screens[k as keyof ScreenConfig])) {
+    payload.s = { ...config.screens };
+  }
   return payload;
 }
 
 /** Overlay a (possibly stale) partial payload onto the registry defaults. */
-function applyPayload(registry: Registry, payload: HashPayload): Config {
+export function applyPayload(registry: Registry, payload: HashPayload): Config {
   const config = defaultConfig(registry);
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return config;
+  config.screens = normalizeScreens(payload.s, config.screens);
   const maxW = maxGroupWeight(registry);
   for (const [id, entry] of Object.entries(payload.g ?? {})) {
-    if (config.groups[id] && Array.isArray(entry) && entry.length === 2) {
+    if (Object.hasOwn(config.groups, id) && Array.isArray(entry) && entry.length === 2) {
       config.groups[id] = { weight: clampWeight(entry[0], maxW), enabled: entry[1] !== 0 };
     }
   }
   for (const [id, entry] of Object.entries(payload.m ?? {})) {
-    if (config.metrics[id] && Array.isArray(entry) && entry.length === 2) {
-      config.metrics[id] = { weight: Math.max(0, Number(entry[0]) || 0), enabled: entry[1] !== 0 };
+    if (Object.hasOwn(config.metrics, id) && Array.isArray(entry) && entry.length === 2) {
+      const weight = Number(entry[0]);
+      config.metrics[id] = { weight: Number.isFinite(weight) ? Math.max(0, weight) : 0, enabled: entry[1] !== 0 };
     }
   }
   return config;
@@ -158,25 +168,15 @@ function clampWeight(w: number, max: number): number {
 
 export function isDefaultConfig(registry: Registry, config: Config): boolean {
   const d = configDiff(registry, config, { kind: 'composite' });
-  return !d.g && !d.m;
+  return !d.g && !d.m && !d.s;
 }
 
-/**
- * Engine run for the store. With the untouched default config, displayed ranks are
- * the authoritative baseline ranks: the shipped 2-dp scores can flip a few near-tie
- * adjacent pairs, which would otherwise show spurious ±1 delta chips at default.
- */
-function runEngine(registry: Registry, config: Config, rows: CbsaRow[]): EngineOutput {
-  const out = computeAll(registry, config, rows);
-  if (isDefaultConfig(registry, config)) {
-    for (const row of rows) out.rankById.set(row.id, row.baseline.rank);
-  }
-  return out;
-}
+// No frozen-rank override: baseline/current ranks use the SAME eligible set.
+const runEngine = computeAll;
 
 function syncHash(registry: Registry, config: Config, colorBy: ColorBy): void {
   const payload = configDiff(registry, config, colorBy);
-  const empty = !payload.g && !payload.m && !payload.c;
+  const empty = !payload.g && !payload.m && !payload.c && !payload.s;
   const url = new URL(window.location.href);
   url.hash = empty ? '' : `c=${b64urlEncode(JSON.stringify(payload))}`;
   window.history.replaceState(null, '', url.toString());
@@ -246,8 +246,6 @@ export interface AppState {
   // UI slice — display-only, never part of scoring config, share hashes, or presets.
   /** Show the muted screened-out CBSA map layer (persisted to localStorage). */
   showExcluded: boolean;
-  /** Feature count of the loaded excluded layer; null until (unless) it loads. */
-  excludedCount: number | null;
 
   loadAll: () => Promise<void>;
   setGroupEnabled: (id: string, enabled: boolean) => void;
@@ -262,9 +260,10 @@ export interface AppState {
   deletePreset: (name: string) => void;
   setColorBy: (colorBy: ColorBy) => void;
   setFilters: (patch: Partial<Filters>) => void;
+  setScreens: (patch: Partial<ScreenConfig>) => void;
+  resetScreens: () => void;
   select: (id: string | null, fly?: boolean) => void;
   setShowExcluded: (show: boolean) => void;
-  setExcludedCount: (count: number) => void;
 }
 
 export const useStore = create<AppState>()((set, get) => {
@@ -297,7 +296,7 @@ export const useStore = create<AppState>()((set, get) => {
     boundaries: null,
     selfTestResult: null,
 
-    config: { groups: {}, metrics: {} },
+    config: { groups: {}, metrics: {}, screens: { ...DEFAULT_SCREENS } },
     engine: null,
     activePreset: null,
     presetNames: Object.keys(readPresetStore()).sort(),
@@ -306,7 +305,6 @@ export const useStore = create<AppState>()((set, get) => {
     selectedId: null,
     flyNonce: 0,
     showExcluded: readShowExcluded(),
-    excludedCount: null,
 
     loadAll: async () => {
       try {
@@ -420,6 +418,16 @@ export const useStore = create<AppState>()((set, get) => {
 
     setFilters: (patch) => set((s) => ({ filters: { ...s.filters, ...patch } })),
 
+    setScreens: (patch) => {
+      const { config, registry } = get();
+      applyConfig({ ...config, screens: normalizeScreens({ ...config.screens, ...patch }, registry?.screens.defaults) });
+    },
+
+    resetScreens: () => {
+      const { config, registry } = get();
+      if (registry) applyConfig({ ...config, screens: defaultConfig(registry).screens });
+    },
+
     select: (id, fly = false) =>
       set((s) => ({ selectedId: id, flyNonce: fly && id ? s.flyNonce + 1 : s.flyNonce })),
 
@@ -432,6 +440,5 @@ export const useStore = create<AppState>()((set, get) => {
       }
     },
 
-    setExcludedCount: (count) => set({ excludedCount: count }),
   };
 });

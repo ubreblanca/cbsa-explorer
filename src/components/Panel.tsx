@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { maxGroupWeight, useStore } from '../state';
 import { groupParticipates } from '../engine';
 import { Tooltip } from './Tooltip';
+import { ScreensCard } from './ScreensCard';
 import type { GroupDef, MetricDef, Registry } from '../types';
 
 export function Panel() {
@@ -14,6 +15,7 @@ export function Panel() {
   const groups = [...registry.groups].sort((a, b) => a.order - b.order);
   return (
     <aside className="panel" aria-label="Scoring controls">
+      <ScreensCard />
       {groups.map((g) => (
         <GroupCard key={g.id} registry={registry} group={g} />
       ))}
@@ -47,7 +49,7 @@ function PanelActions() {
       <button
         type="button"
         onClick={() => useStore.getState().resetConfig()}
-        title="Restore the baseline: all groups and metrics enabled at their default weights"
+        title="Restore default eligibility screens, weights and enabled metrics"
       >
         Reset
       </button>
@@ -105,10 +107,10 @@ function GroupCard({ registry, group }: { registry: Registry; group: GroupDef })
             className="group-share"
             text="All metrics in this group are disabled or zero-weighted, so the group is inert: it is excluded from the composite and the other core shares renormalize without it."
           >
-            —
+            0%
           </Tooltip>
         ) : (
-          <span className="group-share">{share ?? '—'}</span>
+          <span className="group-share">{share ?? '0%'}</span>
         )}
         <button
           type="button"
@@ -162,6 +164,7 @@ function MetricRow({ metric }: { metric: MetricDef }) {
     metric.description,
     `Source: ${metric.source}${metric.vintage ? ` (${metric.vintage})` : ''}`,
     metric.scoring_note ? `Scoring: ${metric.scoring_note}` : '',
+    metric.missing_count !== undefined ? `Unavailable raw values: ${metric.missing_count}. Unscored: ${metric.unscored_count ?? 0}.` : '',
     `Direction: ${metric.direction} is better`,
   ]
     .filter(Boolean)
